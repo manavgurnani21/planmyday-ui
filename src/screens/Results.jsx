@@ -27,9 +27,21 @@ export const Results = ({
   const reqId = useRef(0);
   const cardRefs = useRef(new Map());
 
+  const hasInterests = (interests?.length ?? 0) > 0;
+
   const fetchInitial = useCallback(async () => {
     if (!location) return;
     const myId = ++reqId.current;
+    if (!hasInterests) {
+      // No filters → don't bother the API. Surface a dedicated empty state.
+      setResults([]);
+      setCursor(null);
+      setTotal(0);
+      setActiveId(null);
+      setLoading(false);
+      setError(null);
+      return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -55,7 +67,7 @@ export const Results = ({
     } finally {
       if (reqId.current === myId) setLoading(false);
     }
-  }, [location, radiusMi, interests, openNow]);
+  }, [location, radiusMi, interests, openNow, hasInterests]);
 
   useEffect(() => {
     fetchInitial();
@@ -70,6 +82,9 @@ export const Results = ({
 
   const loadMore = useCallback(async () => {
     if (!cursor || loadingMore) return;
+    // Tag this load against the current filter generation. If filters change
+    // mid-flight, we drop the response on arrival to avoid mixing pages.
+    const myId = reqId.current;
     setLoadingMore(true);
     try {
       const res = await searchActivities({
@@ -81,13 +96,15 @@ export const Results = ({
         limit: 20,
         cursor,
       });
+      if (reqId.current !== myId) return;
       setResults((prev) => [...prev, ...(res.results ?? [])]);
       setCursor(res.next_cursor ?? null);
       setTotal(res.total_estimate ?? total);
     } catch (e) {
+      if (reqId.current !== myId) return;
       setError(e?.message || 'Failed to load more');
     } finally {
-      setLoadingMore(false);
+      if (reqId.current === myId) setLoadingMore(false);
     }
   }, [cursor, loadingMore, location, radiusMi, interests, openNow, total]);
 
@@ -123,9 +140,11 @@ export const Results = ({
             <div className="px-5 py-4 border-b border-ink-100 flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="text-xs font-medium text-ink-600 uppercase tracking-wide">
-                  {loading
-                    ? 'Searching…'
-                    : `${total} nearby · sorted by match`}
+                  {!hasInterests
+                    ? 'Pick interests to start'
+                    : loading
+                      ? 'Searching…'
+                      : `${total} nearby · sorted by match`}
                 </div>
                 <h2 className="text-lg font-semibold text-ink-900 tracking-tight mt-0.5 truncate">
                   {location?.label || 'Your location'}
@@ -141,8 +160,12 @@ export const Results = ({
             </div>
             <div className="flex-1 overflow-y-auto p-3 space-y-3">
               {loading && results.length === 0 && <ListSkeleton />}
-              {!loading && results.length === 0 && !error && (
+              {!loading && !hasInterests && (
+                <NoInterestsState />
+              )}
+              {!loading && hasInterests && results.length === 0 && !error && (
                 <EmptyState
+                  canWiden={radiusMi < 25}
                   onChangeRadius={() =>
                     onChangeRadius(Math.min(25, (radiusMi || 5) * 2))
                   }
@@ -226,20 +249,36 @@ const ListSkeleton = () => (
   </div>
 );
 
-const EmptyState = ({ onChangeRadius }) => (
+const EmptyState = ({ onChangeRadius, canWiden = true }) => (
   <div className="p-6 text-center">
     <div className="mx-auto w-12 h-12 rounded-2xl bg-ink-100 flex items-center justify-center mb-3">
       <Icon name="search" className="w-5 h-5 text-ink-600" />
     </div>
     <div className="font-semibold text-ink-900">Nothing nearby</div>
     <p className="text-sm text-ink-600 mt-1">
-      Try widening your radius or picking different interests.
+      {canWiden
+        ? 'Try widening your radius or picking different interests.'
+        : 'Try different interests or move to a busier area.'}
     </p>
-    <button
-      onClick={onChangeRadius}
-      className="mt-4 inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-xl bg-ink-900 text-white text-sm font-medium hover:bg-ink-800"
-    >
-      Widen radius
-    </button>
+    {canWiden && (
+      <button
+        onClick={onChangeRadius}
+        className="mt-4 inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-xl bg-ink-900 text-white text-sm font-medium hover:bg-ink-800"
+      >
+        Widen radius
+      </button>
+    )}
+  </div>
+);
+
+const NoInterestsState = () => (
+  <div className="p-6 text-center">
+    <div className="mx-auto w-12 h-12 rounded-2xl bg-ink-100 flex items-center justify-center mb-3">
+      <Icon name="check" className="w-5 h-5 text-ink-600" />
+    </div>
+    <div className="font-semibold text-ink-900">Pick at least one interest</div>
+    <p className="text-sm text-ink-600 mt-1">
+      Use the pills above to choose what you're up for.
+    </p>
   </div>
 );

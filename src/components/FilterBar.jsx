@@ -10,7 +10,7 @@ export const FilterBar = ({
   onToggleOpenNow,
   totalCount = 0,
 }) => {
-  const allOn = interests.length === 0 || interests.length === CATEGORIES.length;
+  const allOn = interests.length === CATEGORIES.length;
 
   const togglePill = (id) => {
     if (interests.includes(id)) {

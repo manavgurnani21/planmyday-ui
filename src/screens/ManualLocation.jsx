@@ -56,19 +56,31 @@ export const ManualLocation = ({
     return results;
   }, [results]);
 
-  const submit = () => {
-    if (list.length > 0) {
-      pickResult(list[0]);
-    }
-  };
-
   const pickResult = (r) => {
+    if (
+      !r?.location ||
+      typeof r.location.lat !== 'number' ||
+      typeof r.location.lng !== 'number'
+    ) {
+      setError('That place is missing coordinates — try another suggestion.');
+      return;
+    }
     onSelect({
       lat: r.location.lat,
       lng: r.location.lng,
-      label: r.name,
-      detail: r.detail,
+      label: r.name ?? 'Selected location',
+      detail: r.detail ?? '',
     });
+  };
+
+  const submit = () => {
+    const first = list.find(
+      (r) =>
+        r?.location &&
+        typeof r.location.lat === 'number' &&
+        typeof r.location.lng === 'number'
+    );
+    if (first) pickResult(first);
   };
 
   return (
