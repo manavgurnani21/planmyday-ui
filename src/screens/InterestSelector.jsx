@@ -1,9 +1,29 @@
 import { CATEGORIES } from '../data/mockData';
 import { Icon } from '../components/Icons';
 
-const SELECTED = ['outdoors', 'food', 'arts'];
+export const InterestSelector = ({
+  interests = [],
+  onChange,
+  location,
+  locating = false,
+  onChangeLocation,
+  onSubmit,
+}) => {
+  const toggle = (id) => {
+    if (interests.includes(id)) {
+      onChange(interests.filter((x) => x !== id));
+    } else {
+      onChange([...interests, id]);
+    }
+  };
 
-export const InterestSelector = () => {
+  const canSubmit = interests.length > 0;
+  const locText = location?.label
+    ? location.detail
+      ? `${location.label}, ${location.detail}`
+      : location.label
+    : 'Locating…';
+
   return (
     <div className="flex-1 bg-ink-50">
       <div className="max-w-6xl mx-auto px-8 pt-16 pb-24">
@@ -23,10 +43,12 @@ export const InterestSelector = () => {
 
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-3 gap-4">
           {CATEGORIES.map((c) => {
-            const selected = SELECTED.includes(c.id);
+            const selected = interests.includes(c.id);
             return (
               <button
                 key={c.id}
+                onClick={() => toggle(c.id)}
+                aria-pressed={selected}
                 className={`relative text-left p-6 rounded-2xl border transition-all ${
                   selected
                     ? 'border-ink-900 bg-white shadow-card'
@@ -59,20 +81,38 @@ export const InterestSelector = () => {
             </div>
             <div>
               <div className="font-medium text-ink-900 text-sm">
-                Using your current location
+                {location?.source === 'gps'
+                  ? 'Using your current location'
+                  : location?.source === 'manual'
+                    ? 'Searching from'
+                    : 'Default location'}
+                {locating ? ' · locating…' : ''}
               </div>
               <div className="text-xs text-ink-600">
-                Park Slope, Brooklyn
+                {locText}
                 <span className="mx-2 text-ink-300">·</span>
-                <button className="text-ink-900 font-medium underline-offset-2 hover:underline">
+                <button
+                  onClick={onChangeLocation}
+                  className="text-ink-900 font-medium underline-offset-2 hover:underline"
+                >
                   Change
                 </button>
               </div>
             </div>
           </div>
-          <button className="inline-flex items-center justify-center gap-2 h-12 px-6 rounded-xl bg-ink-900 text-white font-semibold hover:bg-ink-800 transition-colors shadow-pop">
+          <button
+            onClick={canSubmit ? onSubmit : undefined}
+            disabled={!canSubmit}
+            className={`inline-flex items-center justify-center gap-2 h-12 px-6 rounded-xl font-semibold transition-colors shadow-pop ${
+              canSubmit
+                ? 'bg-ink-900 text-white hover:bg-ink-800'
+                : 'bg-ink-200 text-ink-600 cursor-not-allowed shadow-none'
+            }`}
+          >
             Find activities
-            <span className="text-white/60 font-normal">· 3 selected</span>
+            <span className={canSubmit ? 'text-white/60 font-normal' : 'text-ink-600 font-normal'}>
+              · {interests.length} selected
+            </span>
             <Icon name="arrow" className="w-4 h-4" />
           </button>
         </div>
