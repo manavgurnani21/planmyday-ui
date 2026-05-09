@@ -36,9 +36,11 @@ export const ManualLocation = ({
       try {
         const r = await geocode({ q, limit: 8 });
         if (!cancelled) setResults(r.results ?? []);
-      } catch (e) {
+      } catch {
         if (!cancelled) {
-          setError(e?.message || 'Search failed');
+          // Surface a soft message — we don't fall back to fake suggestions
+          // tied to the wrong region.
+          setError("Couldn't reach the location service. Try again in a moment.");
           setResults([]);
         }
       } finally {
@@ -153,7 +155,7 @@ export const ManualLocation = ({
               </div>
               <div className="bg-white rounded-2xl border border-ink-200 shadow-card overflow-hidden">
                 {error && (
-                  <div className="px-5 py-4 text-sm text-red-700 bg-red-50">
+                  <div className="px-5 py-4 text-sm text-ink-600 text-center">
                     {error}
                   </div>
                 )}

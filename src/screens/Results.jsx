@@ -144,7 +144,9 @@ export const Results = ({
                     ? 'Pick interests to start'
                     : loading
                       ? 'Searching…'
-                      : `${total} nearby · sorted by match`}
+                      : error && results.length === 0
+                        ? 'Service unavailable'
+                        : `${total} nearby · sorted by match`}
                 </div>
                 <h2 className="text-lg font-semibold text-ink-900 tracking-tight mt-0.5 truncate">
                   {location?.label || 'Your location'}
@@ -160,8 +162,9 @@ export const Results = ({
             </div>
             <div className="flex-1 overflow-y-auto p-3 space-y-3">
               {loading && results.length === 0 && <ListSkeleton />}
-              {!loading && !hasInterests && (
-                <NoInterestsState />
+              {!loading && !hasInterests && <NoInterestsState />}
+              {!loading && hasInterests && results.length === 0 && error && (
+                <UnavailableState onRetry={fetchInitial} />
               )}
               {!loading && hasInterests && results.length === 0 && !error && (
                 <EmptyState
@@ -170,11 +173,6 @@ export const Results = ({
                     onChangeRadius(Math.min(25, (radiusMi || 5) * 2))
                   }
                 />
-              )}
-              {error && (
-                <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-sm text-red-800">
-                  {error}
-                </div>
               )}
               {results.map((a) => (
                 <div
@@ -280,5 +278,23 @@ const NoInterestsState = () => (
     <p className="text-sm text-ink-600 mt-1">
       Use the pills above to choose what you're up for.
     </p>
+  </div>
+);
+
+const UnavailableState = ({ onRetry }) => (
+  <div className="p-6 text-center">
+    <div className="mx-auto w-12 h-12 rounded-2xl bg-ink-100 flex items-center justify-center mb-3">
+      <Icon name="search" className="w-5 h-5 text-ink-600" />
+    </div>
+    <div className="font-semibold text-ink-900">No results right now</div>
+    <p className="text-sm text-ink-600 mt-1">
+      We couldn't reach the activities service. Try again in a moment.
+    </p>
+    <button
+      onClick={onRetry}
+      className="mt-4 inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-xl bg-ink-900 text-white text-sm font-medium hover:bg-ink-800"
+    >
+      Try again
+    </button>
   </div>
 );
